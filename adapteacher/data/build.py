@@ -242,7 +242,9 @@ def build_semisup_batch_data_loader_two_crop(
     )
 
     batch_size_label = total_batch_size_label // world_size
+    #batch_size_label_fake = total_batch_size_label // world_size
     batch_size_unlabel = total_batch_size_unlabel // world_size
+    #batch_size_unlabel_fake = total_batch_size_unlabel // world_size
 
     label_dataset, unlabel_dataset = dataset
     label_sampler, unlabel_sampler = sampler
@@ -258,6 +260,7 @@ def build_semisup_batch_data_loader_two_crop(
             ),  # don't batch, but yield individual elements
             worker_init_fn=worker_init_reset_seed,
         )  # yield individual mapped dict
+        
         unlabel_data_loader = torch.utils.data.DataLoader(
             unlabel_dataset,
             sampler=unlabel_sampler,
@@ -268,6 +271,7 @@ def build_semisup_batch_data_loader_two_crop(
             ),  # don't batch, but yield individual elements
             worker_init_fn=worker_init_reset_seed,
         )  # yield individual mapped dict
+        
         return AspectRatioGroupedSemiSupDatasetTwoCrop(
             (label_data_loader, unlabel_data_loader),
             (batch_size_label, batch_size_unlabel),

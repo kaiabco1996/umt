@@ -519,7 +519,7 @@ class ATeacherTrainer(DefaultTrainer):
                     loss_dict[key] = record_dict[key] * 1
             losses = sum(loss_dict.values())
 
-        else:
+        else: #EMA update the teacher model
             if self.iter == self.cfg.SEMISUPNET.BURN_UP_STEP:
                 # update copy the the whole model
                 self._update_teacher_model(keep_rate=0.00)
@@ -650,7 +650,7 @@ class ATeacherTrainer(DefaultTrainer):
                         loss_dict[key] = record_dict[key] * 1
 
             losses = sum(loss_dict.values())
-
+        print(record_dict)
         metrics_dict = record_dict
         metrics_dict["data_time"] = data_time
         self._write_metrics(metrics_dict)

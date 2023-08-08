@@ -12,7 +12,7 @@ from detectron2.modeling.roi_heads import (
     ROI_HEADS_REGISTRY,
     StandardROIHeads,
 )
-from detectron2.modeling.roi_heads.fast_rcnn import FastRCNNOutputLayers
+from adapteacher.modeling.roi_heads.outputlayers import FastRCNNOutputLayers
 from adapteacher.modeling.roi_heads.fast_rcnn import FastRCNNFocaltLossOutputLayers
 
 import numpy as np
@@ -92,16 +92,15 @@ class StandardROIHeadsPseudoLab(StandardROIHeads):
         del targets
 
         if (self.training and compute_loss) or compute_val_loss:
-            losses, _ = self._forward_box(
+            losses, predictions, predictions_conf = self._forward_box(
                 features, proposals, compute_loss, compute_val_loss, branch
             )
-            return proposals, losses
+            return proposals, losses, predictions_conf
         else:
-            pred_instances, predictions = self._forward_box(
+            pred_instances, predictions, predictions_conf = self._forward_box(
                 features, proposals, compute_loss, compute_val_loss, branch
             )
-
-            return pred_instances, predictions
+            return pred_instances, predictions, predictions_conf
 
     def _forward_box(
         self,
@@ -131,10 +130,9 @@ class StandardROIHeadsPseudoLab(StandardROIHeads):
                         proposals, pred_boxes
                     ):
                         proposals_per_image.proposal_boxes = Boxes(pred_boxes_per_image)
-            return losses, predictions
+            return losses, predictions[0], predictions[1]
         else:
-
-            pred_instances, _ = self.box_predictor.inference(predictions, proposals)
+            pred_instances, _ = self.box_predictor.inference(predictions[0], proposals)
             return pred_instances, predictions
 
     @torch.no_grad()
