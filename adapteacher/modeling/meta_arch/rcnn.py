@@ -226,7 +226,7 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(GeneralizedRCNN):
             )
 
             # roi_head lower branch
-            _, detector_losses, conf_losses = self.roi_heads(
+            _, detector_losses, _ = self.roi_heads(
                 images,
                 features,
                 proposals_rpn,
@@ -260,7 +260,7 @@ class DAobjTwoStagePseudoLabGeneralizedRCNN(GeneralizedRCNN):
             )
 
             # roi_head lower branch
-            _, detector_losses = self.roi_heads(
+            _, detector_losses, _ = self.roi_heads(
                 images,
                 features,
                 proposals_rpn,

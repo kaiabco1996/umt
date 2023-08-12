@@ -97,10 +97,10 @@ class StandardROIHeadsPseudoLab(StandardROIHeads):
             )
             return proposals, losses, predictions_conf
         else:
-            pred_instances, predictions, predictions_conf = self._forward_box(
+            pred_instances, predictions = self._forward_box(
                 features, proposals, compute_loss, compute_val_loss, branch
             )
-            return pred_instances, predictions, predictions_conf
+            return pred_instances, predictions
 
     def _forward_box(
         self,
@@ -130,10 +130,10 @@ class StandardROIHeadsPseudoLab(StandardROIHeads):
                         proposals, pred_boxes
                     ):
                         proposals_per_image.proposal_boxes = Boxes(pred_boxes_per_image)
-            return losses, predictions[0], predictions[1]
+            return losses, predictions[1], predictions[2]
         else:
-            pred_instances, _ = self.box_predictor.inference(predictions[0], proposals)
-            return pred_instances, predictions
+            pred_instances, _ = self.box_predictor.inference((predictions[0], predictions[1]), proposals)
+            return pred_instances, (predictions[0], predictions[1])
 
     @torch.no_grad()
     def label_and_sample_proposals(

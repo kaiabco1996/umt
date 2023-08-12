@@ -110,6 +110,11 @@ python train_net.py\
       OUTPUT_DIR output/exp_city
 ```
 
+python train_net.py\
+      --num-gpus 3\
+      --config configs/faster_rcnn_R101_cross_clipart_b4.yaml\
+      OUTPUT_DIR output/exp_clipart
+
 ## Resume the training
 
 ```shell

@@ -292,9 +292,9 @@ class FastRCNNOutputLayers(nn.Module):
             x = torch.flatten(x, start_dim=1)
         scores = self.cls_score(x)
         proposal_deltas, proposal_conf_deltas = self.bbox_pred(x)
-        print("proposal_conf_deltas " + str(proposal_conf_deltas))
-        print("proposal_deltas " + str(proposal_deltas))
-        print("scores " + str(scores))
+        # print("proposal_conf_deltas " + str(proposal_conf_deltas.shape)) # 1024 x 4
+        # print("proposal_deltas " + str(proposal_deltas.shape)) # 1024 x 32
+        # print("scores " + str(scores.shape))# 1024 x 9
         
         return scores, proposal_deltas, proposal_conf_deltas
 
@@ -358,10 +358,16 @@ class FastRCNNOutputLayers(nn.Module):
         fg_inds = nonzero_tuple((gt_classes >= 0) & (gt_classes < self.num_classes))[0]
         if pred_deltas.shape[1] == box_dim:  # cls-agnostic regression
             fg_pred_deltas = pred_deltas[fg_inds]
+            fg_pred_conf_deltas = proposal_conf_deltas[fg_inds]
+            #print("pred deltas agnostic: " + str(fg_pred_deltas.shape))
         else:
             fg_pred_deltas = pred_deltas.view(-1, self.num_classes, box_dim)[
                 fg_inds, gt_classes[fg_inds]
             ]
+            #print("pred deltas normal: " + str(fg_pred_deltas.shape))
+            fg_pred_conf_deltas = proposal_conf_deltas[fg_inds]
+            
+            
 
         if self.box_reg_loss_type == "smooth_l1":
             gt_pred_deltas = self.box2box_transform.get_deltas(
@@ -391,14 +397,14 @@ class FastRCNNOutputLayers(nn.Module):
         # means that the single example in minibatch (1) and each of the 100 examples
         # in minibatch (2) are given equal influence.
         b = torch.bernoulli(
-                    torch.Tensor(proposal_conf_deltas.size()).uniform_(0, 1) #[0 1 0 1], confidence = [0.22 0.55 0.79 0.02]
+                    torch.Tensor(fg_pred_conf_deltas.size()).uniform_(0, 1) #[0 1 0 1], confidence = [0.22 0.55 0.79 0.02]
                 ).cuda() #randomly generate binary
-        conf = proposal_conf_deltas * b + (1 - b) #[0 0.55 0 0.02] + [1 0 1 0] = [1 0.55 1 0.02]
-        print("loss_box_reg: " + str(loss_box_reg))
-        print("conf: " + str(conf))
-        print("conf_mean: " + str(torch.mean(conf, 1)))
-        print("loss_box: " + str((loss_box_reg / max(gt_classes.numel(), 1.0))))
-        print("result: " + str(torch.sum((loss_box_reg / max(gt_classes.numel(), 1.0)).T*torch.mean(conf, 1))))
+        conf = fg_pred_conf_deltas * b + (1 - b) #[0 0.55 0 0.02] + [1 0 1 0] = [1 0.55 1 0.02]
+        # print("loss_box_reg: " + str(loss_box_reg.shape)) # ?? x 4
+        # print("conf: " + str(conf.shape)) # 1024 x 4
+        # print("conf_mean: " + str(torch.mean(conf, 1).shape)) # 1024 x 1
+        # print("loss_box: " + str((loss_box_reg / max(gt_classes.numel(), 1.0)).shape)) # ?? x 4
+        # print("result: " + str(torch.sum((loss_box_reg / max(gt_classes.numel(), 1.0)).T*torch.mean(conf, 1))))
         return torch.sum((loss_box_reg / max(gt_classes.numel(), 1.0)).T*torch.mean(conf, 1))
         #return loss_box_reg / max(gt_classes.numel(), 1.0)  # return 0 if empty
 
@@ -413,6 +419,10 @@ class FastRCNNOutputLayers(nn.Module):
             list[Instances]: same as `fast_rcnn_inference`.
             list[Tensor]: same as `fast_rcnn_inference`.
         """
+        print("predictions: " + str(predictions))
+        #print("predictions: " + str(predictions.shape))
+        print("proposals: " + str(proposals))
+        #print("proposals: " + str(proposals.shape))
         boxes = self.predict_boxes(predictions, proposals)
         scores = self.predict_probs(predictions, proposals)
         image_shapes = [x.image_size for x in proposals]
@@ -478,8 +488,16 @@ class FastRCNNOutputLayers(nn.Module):
         if not len(proposals):
             return []
         _, proposal_deltas = predictions
+        print("proposal_deltas: " + str(proposal_deltas))
+        print("proposal_deltas: " + str(proposal_deltas.shape))
+        
         num_prop_per_image = [len(p) for p in proposals]
+        print("num_prop_per_image: " + str(num_prop_per_image))
+        # print("num_prop_per_image: " + str(num_prop_per_image.shape))
+        
         proposal_boxes = cat([p.proposal_boxes.tensor for p in proposals], dim=0)
+        print("proposal_boxes: " + str(proposal_boxes))
+        #print("proposal_boxes: " + str(proposal_boxes.shape))
         predict_boxes = self.box2box_transform.apply_deltas(
             proposal_deltas,
             proposal_boxes,
